@@ -38,11 +38,11 @@ public class MesTags {
     }
 
     public MesTags() {
-        this.authorizationMes = null;
+        this.authorizationMes = AuthorizationMes.AUTH_MES_EMPTY;
         this.signalingMes = null;
         this.heartbeat = 0;
         this.orderDescription = null;
-        this.batchloadMes = null;
+        this.batchloadMes = BatchloadMes.BATCHLOAD_MES_EMPTY;
     }
 
     public int incrementHeartbeat() {

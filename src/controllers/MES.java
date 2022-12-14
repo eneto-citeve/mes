@@ -60,7 +60,6 @@ public class MES implements MtexDriver {
 
     @Override
     public void mtexCreateNewOrder(OrderStructure newOrder) {
-
         try {
             this.nextWorkOrder = new WordOrder(
                     newOrder.getOrderId(),
@@ -70,12 +69,11 @@ public class MES implements MtexDriver {
                     newOrder.getStepCount(),
                     newOrder.getOvenTemperature()
             );
-
-            queueOrderStatus.add(new OrderStatus(StatusOfOrder.REQUESTED, this.nextWorkOrder.getOrderId(), StateOfOrder.REQUESTED_ACCEPTED));
-
-        } catch (OverprintOutsideRange | OvenTemperatureOutsideRange | StepCountOutsideRange overprintException) {
-            queueOrderStatus.add(new OrderStatus(StatusOfOrder.REQUESTED, this.nextWorkOrder.getOrderId(), StateOfOrder.REQUESTED_DENIED));
+        } catch (OverprintOutsideRange | OvenTemperatureOutsideRange | StepCountOutsideRange exException) {
+            queueOrderStatus.add(new OrderStatus(StatusOfOrder.REQUESTED, newOrder.getOrderId(), StateOfOrder.REQUESTED_DENIED));
         }
+
+        queueOrderStatus.add(new OrderStatus(StatusOfOrder.REQUESTED, this.nextWorkOrder.getOrderId(), StateOfOrder.REQUESTED_ACCEPTED));
 
         if (checkIfBatchloadMesEmpty()) {
             mtexExecuteOrder();
@@ -94,10 +92,8 @@ public class MES implements MtexDriver {
             // TODO: Escrever na tag HEARTBEAT no servidor OPC-UA
             this.opcConnector.writeNode(this.nodeOPC.HEARTBEAT, uint(heartbeat));
             System.out.println(heartbeat);
-        } catch (ExecutionException exExc) {
+        } catch (ExecutionException | InterruptedException exExc) {
             System.out.println("Error while writing on tag HEARTBEAT: " + exExc);
-        } catch (InterruptedException itExc) {
-            System.out.println("Error while writing on tag HEARTBEAT: " + itExc);
         }
 
     }
@@ -109,17 +105,20 @@ public class MES implements MtexDriver {
 
         if (this.currentWorkOrder != null) {
             // TODO: Escrever nova ordem no servidor OPC-UA
+            try {
+                this.opcConnector.writeNode(this.nodeOPC.ARRAY_RECEITA_0, this.currentWorkOrder.getWorkOrderInArray());
+            } catch (ExecutionException | InterruptedException exExc) {
+                System.out.println("Error while writing on tag ARRAY_RECEITA_0: " + exExc);
+            }
 
             // TODO: Informar via MQTT
             this.queueOrderStatus.add(new OrderStatus(StatusOfOrder.CREATED, this.currentWorkOrder.getOrderId(), StateOfOrder.CREATED_SETUP));
 
-            //this.mesTags.getBatchloadMes(BatchloadMes.findByCode(this.currentWorkOrder.getOrderId()));
+            this.mesTags.setBatchloadMes(BatchloadMes.findByCode(Integer.parseInt(this.currentWorkOrder.getOrderId())));
             try {
-                this.opcConnector.writeNode(this.nodeOPC.BATCHLOAD_MES, this.mesTags.getBatchloadMes());
-            }  catch (ExecutionException exExc) {
+                this.opcConnector.writeNode(this.nodeOPC.BATCHLOAD_MES, (short) BatchloadMes.getCode(this.mesTags.getBatchloadMes()));
+            } catch (ExecutionException | InterruptedException exExc) {
                 System.out.println("Error while writing on tag BATCHLOAD_MES: " + exExc);
-            } catch (InterruptedException itExc) {
-                System.out.println("Error while writing on tag BATCHLOAD_MES: " + itExc);
             }
         }
     }
@@ -127,10 +126,8 @@ public class MES implements MtexDriver {
     public void setTimeWithoutHeartbeat() {
         try {
             this.opcConnector.writeNode(this.nodeOPC.TEMPO_SEM_HEARTBEAT, ushort(MesTags.getTimeWithoutHeartbeat()));
-        } catch (ExecutionException exExc) {
+        } catch (ExecutionException | InterruptedException exExc) {
             System.out.println("Error while writing on tag TEMPO_SEM_HEARTBEAT: " + exExc);
-        } catch (InterruptedException itExc) {
-            System.out.println("Error while writing on tag TEMPO_SEM_HEARTBEAT: " + itExc);
         }
 
     }
@@ -140,45 +137,38 @@ public class MES implements MtexDriver {
         // TODO: Escrever na tag LER_HISTORICO (1) no servidor OPC-UA
         try {
             this.opcConnector.writeNode(nodeOPC.LER_HISTORICO, true);
-        } catch (ExecutionException exExc) {
+        } catch (ExecutionException | InterruptedException exExc) {
             System.out.println("Error while writing on tag LER_HISTORICO: " + exExc);
-        } catch (InterruptedException itExc) {
-            System.out.println("Error while writing on tag LER_HISTORICO: " + itExc);
         }
     }
 
     @Override
-    public void mtexProcessOnlineOperationMode(ConsumptionChannel realConsumption, ConsumptionChannel estimatedConsumption) {
-        mtexProcessHistoricalData(realConsumption, estimatedConsumption);
+    public void mtexProcessOnlineOperationMode(ConsumptionChannel consumptionChannel) {
+        mtexProcessHistoricalData(consumptionChannel);
         // TODO: Escrever na tag LER_HISTORICO (0) no servidor OPC-UA
         try {
             this.opcConnector.writeNode(nodeOPC.LER_HISTORICO, false);
-        } catch (ExecutionException exExc) {
+        } catch (ExecutionException | InterruptedException exExc) {
             System.out.println("Error while writing on tag LER_HISTORICO: " + exExc);
-        } catch (InterruptedException itExc) {
-            System.out.println("Error while writing on tag LER_HISTORICO: " + itExc);
         }
     }
 
     // TODO: Definir os argumentos da função
-    private void mtexProcessHistoricalData(ConsumptionChannel realConsumption, ConsumptionChannel estimatedConsumption) {
-        this.currentWorkOrder.setRealConsumption(realConsumption);
-        this.currentWorkOrder.setEstimatedConsumption(estimatedConsumption);
+    private void mtexProcessHistoricalData(ConsumptionChannel consumptionChannel) {
+        this.currentWorkOrder.setConsumptionChannel(consumptionChannel);
     }
 
     @Override
-    public void mtexProcessCanceledOrder(ConsumptionChannel realConsumption, ConsumptionChannel estimatedConsumption) {
-        mtexProcessHistoricalData(realConsumption, estimatedConsumption);
+    public void mtexProcessCanceledOrder(ConsumptionChannel consumptionChannel) {
+        mtexProcessHistoricalData(consumptionChannel);
         // TODO: Ler toda a informação sobre consumos e afins
 
         mesTags.setAuthorizationMes(AuthorizationMes.AUTH_MES_EMPTY);
         // TODO: Escrever na tag AUTORIZACAO_MES no servidor OPC_UA
         try {
             this.opcConnector.writeNode(nodeOPC.AUTORIZACAO_MES, AuthorizationMes.getCode(mesTags.getAuthorizationMes()));
-        } catch (ExecutionException exExc) {
+        } catch (ExecutionException | InterruptedException exExc) {
             System.out.println("Error while writing on tag LER_HISTORICO: " + exExc);
-        } catch (InterruptedException itExc) {
-            System.out.println("Error while writing on tag LER_HISTORICO: " + itExc);
         }
 
         // TODO: Informar via MQTT
@@ -186,8 +176,8 @@ public class MES implements MtexDriver {
     }
 
     @Override
-    public void mtexProcessFinishedOrder(ConsumptionChannel realConsumption, ConsumptionChannel estimatedConsumption) {
-        mtexProcessHistoricalData(realConsumption, estimatedConsumption);
+    public void mtexProcessFinishedOrder(ConsumptionChannel consumptionChannel) {
+        mtexProcessHistoricalData(consumptionChannel);
         // TODO: Ler toda a informação sobre consumos e afins
 
         mesTags.setAuthorizationMes(AuthorizationMes.AUTH_MES_EMPTY);
@@ -208,10 +198,8 @@ public class MES implements MtexDriver {
             // TODO: Escrever na tag no servidor OPC-UA
             try {
                 this.opcConnector.writeNode(nodeOPC.BATCHLOAD_MES, BatchloadMes.getCode(mesTags.getBatchloadMes()));
-            } catch (ExecutionException exExc) {
+            } catch (ExecutionException | InterruptedException exExc) {
                 System.out.println("Error while writing on tag BATCHLOAD_MES: " + exExc);
-            } catch (InterruptedException itExc) {
-                System.out.println("Error while writing on tag BATCHLOAD_MES: " + itExc);
             }
         }
     }
@@ -223,10 +211,8 @@ public class MES implements MtexDriver {
         // TODO: Escrever na tag no servidor OPC-UA
         try {
             this.opcConnector.writeNode(nodeOPC.BATCHLOAD_MES, BatchloadMes.getCode(mesTags.getBatchloadMes()));
-        } catch (ExecutionException exExc) {
+        } catch (ExecutionException | InterruptedException exExc) {
             System.out.println("Error while writing on tag BATCHLOAD_MES: " + exExc);
-        } catch (InterruptedException itExc) {
-            System.out.println("Error while writing on tag BATCHLOAD_MES: " + itExc);
         }
     }
 
@@ -237,10 +223,8 @@ public class MES implements MtexDriver {
         // TODO: Escrever na tag no servidor OPC-UA
         try {
             this.opcConnector.writeNode(nodeOPC.AUTORIZACAO_MES, AuthorizationMes.getCode(mesTags.getAuthorizationMes()));
-        } catch (ExecutionException exExc) {
+        } catch (ExecutionException | InterruptedException exExc) {
             System.out.println("Error while writing on tag AUTORIZACAO_MES: " + exExc);
-        } catch (InterruptedException itExc) {
-            System.out.println("Error while writing on tag AUTORIZACAO_MES: " + itExc);
         }
     }
 
@@ -260,10 +244,8 @@ public class MES implements MtexDriver {
         // TODO: Enviar para o servidor OPC-UA
         try {
             this.opcConnector.writeNode(nodeOPC.AUTORIZACAO_MES, AuthorizationMes.getCode(mesTags.getAuthorizationMes()));
-        } catch (ExecutionException exExc) {
+        } catch (ExecutionException | InterruptedException exExc) {
             System.out.println("Error while writing on tag AUTORIZACAO_MES: " + exExc);
-        } catch (InterruptedException itExc) {
-            System.out.println("Error while writing on tag AUTORIZACAO_MES: " + itExc);
         }
     }
 }

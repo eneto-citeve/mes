@@ -30,10 +30,10 @@ public enum BatchloadPlc {
     }
 
     public static int getCode(BatchloadPlc tag) {
-        if (tag == BATCHLOAD_PLC_ORDER_ID) {
+        if (tag == BATCHLOAD_PLC_ORDER_ID && tag.orderId != -1) {
             return tag.orderId;
-        } else {
-            return tag.code;
         }
+
+        return tag.code;
     }
 }

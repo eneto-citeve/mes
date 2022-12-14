@@ -11,10 +11,10 @@ public interface MtexDriver {
     void mtexExecuteOrder();
     void mtexCheckIfSameOrderId(int orderId);
     void mtexProcessOfflineOperationMode();
-    void mtexProcessOnlineOperationMode(ConsumptionChannel realConsumption, ConsumptionChannel estimatedConsumption);
+    void mtexProcessOnlineOperationMode(ConsumptionChannel consumptionChannel);
     // void mtexProcessHistoricalData(ConsumptionChannel realConsumption, ConsumptionChannel estimatedConsumption);
-    void mtexProcessCanceledOrder(ConsumptionChannel realConsumption, ConsumptionChannel estimatedConsumption);
-    void mtexProcessFinishedOrder(ConsumptionChannel realConsumption, ConsumptionChannel estimatedConsumption);
+    void mtexProcessCanceledOrder(ConsumptionChannel consumptionChannel);
+    void mtexProcessFinishedOrder(ConsumptionChannel consumptionChannel);
     void mtexResetWorkOrder(String message);
     void mtexResetAuthorization();
     void mtexCheckStartingConditions();

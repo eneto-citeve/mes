@@ -18,8 +18,8 @@ public class InformationModel {
     public final Node BATCHLOAD_PLC;
     public final Node CHECKSUM_PLC_MES;
     public final Node CONTAGEM;
-    public final Node CONSUMO;
-    public final Node CONSUMO_TEORICO;
+    public final Node ARRAY_CANAL_CONSUMO_0;
+    public final Node ARRAY_RECEITA_0;
 
     public InformationModel(int namespace) {
         this.AUTORIZACAO_MES = new Node(namespace, "AUTORIZACAO_MES", Type.D_INTEGER);
@@ -37,7 +37,7 @@ public class InformationModel {
         this.BATCHLOAD_PLC = new Node(namespace, "BATCHLOAD_PLC", Type.D_INTEGER);
         this.CHECKSUM_PLC_MES = new Node(namespace, "CHECKSUM_PLC_MES", Type.U_INTEGER);
         this.CONTAGEM = new Node(namespace, "CONTAGEM", Type.U_D_INTEGER);
-        this.CONSUMO = new Node(namespace, "CONSUMO", Type.U_D_INTEGER);
-        this.CONSUMO_TEORICO = new Node(namespace, "CONSUMO_TEORICO", Type.U_D_INTEGER);
+        this.ARRAY_CANAL_CONSUMO_0 = new Node(namespace, "ARRAY_CANAL_CONSUMO_0", Type.ARRAY_U_D_INTEGER);
+        this.ARRAY_RECEITA_0 = new Node(namespace, "ARRAY_RECEITA_0", Type.ARRAY_U_D_INTEGER);
     }
 }

@@ -6,5 +6,6 @@ public enum Type {
     U_INTEGER,
     U_D_INTEGER,
     STRING,
-    BOOL
+    BOOL,
+    ARRAY_U_D_INTEGER
 }

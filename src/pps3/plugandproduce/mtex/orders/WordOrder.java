@@ -50,25 +50,13 @@ public class WordOrder {
 
     private final int ovenTemperature;
 
-    public ConsumptionChannel getRealConsumption() {
-        return realConsumption;
+    public ConsumptionChannel getConsumptionChannel() {
+        return consumptionChannel;
     }
 
-    public void setRealConsumption(ConsumptionChannel realConsumption) {
-        this.realConsumption = realConsumption;
-    }
+    public void setConsumptionChannel(ConsumptionChannel consumptionChannel) { this.consumptionChannel = consumptionChannel; }
 
-    private ConsumptionChannel realConsumption;
-
-    public ConsumptionChannel getEstimatedConsumption() {
-        return estimatedConsumption;
-    }
-
-    public void setEstimatedConsumption(ConsumptionChannel estimatedConsumption) {
-        this.estimatedConsumption = estimatedConsumption;
-    }
-
-    private ConsumptionChannel estimatedConsumption;
+    private ConsumptionChannel consumptionChannel;
 
     public WordOrder(String orderId, int quantity, String ripId, int overprint, int stepCount, int ovenTemperature) throws OverprintOutsideRange, StepCountOutsideRange, OvenTemperatureOutsideRange {
         if (overprint > OVERPRINT_MAX || overprint < OVERPRINT_MIN) {
@@ -80,7 +68,7 @@ public class WordOrder {
         }
 
         if (ovenTemperature > OVEN_TEMPERATURE_MAX || ovenTemperature < OVEN_TEMPERATURE_MIN) {
-            throw new OvenTemperatureOutsideRange("The stepCount value ("+ovenTemperature+") is outside the defined boundaries ["+OVEN_TEMPERATURE_MIN+","+OVEN_TEMPERATURE_MAX+"].");
+            throw new OvenTemperatureOutsideRange("The ovenTemperature value ("+ovenTemperature+") is outside the defined boundaries ["+OVEN_TEMPERATURE_MIN+","+OVEN_TEMPERATURE_MAX+"].");
         }
 
         this.orderId = orderId;
@@ -89,8 +77,7 @@ public class WordOrder {
         this.overprint = overprint;
         this.stepCount = stepCount;
         this.ovenTemperature = ovenTemperature;
-        this.realConsumption = null;
-        this.estimatedConsumption = null;
+        this.consumptionChannel = null;
     }
 
     public int calculateChecksum16Bits() {
@@ -191,4 +178,9 @@ public class WordOrder {
 
         return crc;
     }
+
+    public long[] getWorkOrderInArray() {
+        return new long[] {Long.valueOf(this.ripId), this.overprint, this.stepCount, this.ovenTemperature, this.quantity};
+    }
+
 }
